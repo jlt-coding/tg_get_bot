@@ -92,6 +92,8 @@ def handle(msg):
             if perpetrator not in muted_users:
                 muted_users.append(perpetrator)
             users[perpetrator].punish()
+            punish_answer = '@%s was punished to \'mute\' for the length of 5 messages.' % perpetrator
+            bot.sendMessage(chat_identifier, punish_answer)
         else:
             punish_answer = 'Only Luki can mute users, this was decided to prevent mutually assured destruction.'
             bot.sendMessage(chat_identifier, punish_answer)
