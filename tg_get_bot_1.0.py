@@ -162,7 +162,9 @@ if save_file_location.is_file():
         # If the user is being muted, append his name to the muted users list
         if loaded_user_mute > 0:
             muted_users.append(loaded_user_name)
-
+else:
+    logger.info('No save-file found, generating and continuing...')
+    
 # Start the bot and pass every message to the handle function
 bot = telepot.Bot(TOKEN)
 MessageLoop(bot, handle).run_as_thread()
