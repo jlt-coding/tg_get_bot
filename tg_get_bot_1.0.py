@@ -139,7 +139,7 @@ users = {}
 muted_users = []
 
 # If a save-file exists, create the users dict from it
-save_file_location = pathlib.Path('./safe.json')
+save_file_location = pathlib.Path('./save.json')
 if save_file_location.is_file():
     with open ('save.json', 'r') as fh_load_users:
         loaded_users = json.load(fh_load_users)
