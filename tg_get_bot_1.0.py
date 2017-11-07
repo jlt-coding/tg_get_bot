@@ -4,13 +4,11 @@
 #
 # Created by Klaus Ehrlinger on 30.10.2017.
 #
-import sys
 import time
 import telepot
 from telepot.loop import MessageLoop
-import re
 import User
-from pprint import pprint
+import json
 
 # Function being carried out when receiving a message
 def handle(msg):
@@ -37,7 +35,6 @@ def handle(msg):
     # Create a dict. Keys = username, Value = User object
     if sender_username not in users:
         users[sender_username] = User.Telegramuser(sender_username, sender_identifier)
-    # TODO save and load the dict of users in chat
 
     # Check if sender is on mute list.
     # Delete message if muted.
@@ -45,6 +42,7 @@ def handle(msg):
         #Delete user from muted list if shamer.mute <= 0
     if sender_username in muted_users:
         bot.deleteMessage((chat_identifier, message_identifier))
+        return
     if sender_username not in muted_users:
         for shamer in muted_users:
             users[shamer].mute -= 1
@@ -68,15 +66,21 @@ def handle(msg):
 
     # Punish
     if '/punish' in message_text:
-        punish_message = message_text.split()
-        perpetrator = punish_message[1][1:]
-        if len(punish_message) == 4:
-            sentence = punish_message[2]
-            severity = int(punish_message[3])
-            users[perpetrator].punish(sentence, severity)
-        if perpetrator not in muted_users:
-            muted_users.append(perpetrator)
-        users[perpetrator].punish() # TODO change this so that only admins or better only luki can punish
+        if sender_username == 'Luciferase':
+            punish_message = message_text.split()
+            perpetrator = punish_message[1][1:]
+            if len(punish_message) == 4:
+                sentence = punish_message[2]
+                severity = int(punish_message[3])
+                users[perpetrator].punish(sentence=sentence, severity=severity)
+                punish_answer = '@%s was punished to \'%s\' for the length of %i messages.' % (perpetrator, sentence, severity)
+                bot.sendMessage(chat_identifier, punish_answer)
+            if perpetrator not in muted_users:
+                muted_users.append(perpetrator)
+            users[perpetrator].punish()
+        else:
+            punish_answer = 'Only Luki can mute users, this was decided to prevent mutually assured destruction.'
+            bot.sendMessage(chat_identifier, punish_answer)
 
     # Give gold
     if '/gold' in message_text:
@@ -85,6 +89,12 @@ def handle(msg):
             bot.sendMessage(chat_identifier, gold_message)
         else:
             gold_arguments = message_text.split()
+            # If no receiver is specified, then an error is returned.
+            if len(gold_arguments) <= 1:
+                missing_receiver = 'You did not specify a receiver for your gold, the correct format is\n' \
+                                   '\'/gold @User\''
+                bot.sendMessage(chat_identifier, missing_receiver)
+                return
             receiver = gold_arguments[1][1:]
             receiver_gold_status = users[receiver].receive_gold()
             giver_gold_status = users[sender_username].give_gold()
@@ -98,6 +108,11 @@ def handle(msg):
             bot.sendMessage(chat_identifier, silver_message)
         else:
             silver_arguments = message_text.split()
+            if len(silver_arguments) <= 1:
+                missing_receiver = 'You did not specify a receiver for your silver, the correct format is\n' \
+                                   '\'/silver @User\''
+                bot.sendMessage(chat_identifier, missing_receiver)
+                return
             receiver = silver_arguments[1][1:]
             receiver_silver_status = users[receiver].receive_silver()
             giver_silver_status = users[sender_username].give_silver()
@@ -107,14 +122,42 @@ def handle(msg):
     # Load
     #if '/load' in message_text:
 
-TOKEN = ''  # this is the labthings bot
+#Initialise the bot and some variables needed for operation
+TOKEN = ''
 users = {}
 muted_users = []
+
+# Open the save file when the program starts
+with open ('save.json', 'r') as fh_load_users:
+    loaded_users = json.load(fh_load_users)
+
+# Load the values of every entry of the save file into the users dict
+for u in loaded_users:
+    user = loaded_users[u]
+    loaded_user_name = user['name']
+    loaded_user_id = user['id']
+    loaded_user_mute = user['mute']
+    loaded_user_gold = user['gold']
+    loaded_user_silver = user['silver']
+    loaded_user_gold_rec = user['gold_received']
+    loaded_user_silver_rec = user['silver_received']
+    users[loaded_user_name] = User.Telegramuser(user_name=loaded_user_name, user_id=loaded_user_id,
+                                                user_mute=loaded_user_mute, user_gold=loaded_user_gold,
+                                                user_silver=loaded_user_silver, user_gold_rec=loaded_user_gold_rec,
+                                                user_silver_rec=loaded_user_silver_rec)
+    # If the user is being muted, append his name to the muted users list
+    if loaded_user_mute > 0:
+        muted_users.append(loaded_user_name)
+
+# Start the bot and pass every message to the handle function
 bot = telepot.Bot(TOKEN)
 MessageLoop(bot, handle).run_as_thread()
 print ('Listening ...')
 
-
-# Keep the program running.
+# Save the status of the users every 150 seconds in a .json-file
 while 1:
-    time.sleep(1)
+    time.sleep(150)
+    with open ('save.json', 'w') as fh_save_users:
+        # default=lambda o: o.__dict__ changes the Telegramuser-object to a dict
+        fh_save_users.write(json.dumps(users, default=lambda o: o.__dict__))
+        print ("saved")
