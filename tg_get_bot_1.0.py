@@ -9,6 +9,21 @@ import telepot
 from telepot.loop import MessageLoop
 import User
 import json
+import logging
+import pathlib
+
+# TODO put this in a function?
+# Configure the logger - no idea what i am actually doing
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+    # create a file handler
+log_handler = logging.FileHandler('bot.log')
+log_handler.setLevel(logging.DEBUG)
+    # create a logging format
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_handler.setFormatter(formatter)
+    # add the handlers to the logger
+logger.addHandler(log_handler)
 
 # Function being carried out when receiving a message
 def handle(msg):
@@ -30,7 +45,6 @@ def handle(msg):
     message_identifier = msg['message_id']
     message_text = msg['text']
     report_from = 3
-
 
     # Create a dict. Keys = username, Value = User object
     if sender_username not in users:
@@ -119,45 +133,45 @@ def handle(msg):
             silver_message = '%s\n%s' % (receiver_silver_status, giver_silver_status)
             bot.sendMessage(chat_identifier, silver_message)
 
-    # Load
-    #if '/load' in message_text:
-
 #Initialise the bot and some variables needed for operation
-TOKEN = ''
+TOKEN = ''  # this is the token you get from BotFather
 users = {}
 muted_users = []
 
-# Open the save file when the program starts
-with open ('save.json', 'r') as fh_load_users:
-    loaded_users = json.load(fh_load_users)
-
-# Load the values of every entry of the save file into the users dict
-for u in loaded_users:
-    user = loaded_users[u]
-    loaded_user_name = user['name']
-    loaded_user_id = user['id']
-    loaded_user_mute = user['mute']
-    loaded_user_gold = user['gold']
-    loaded_user_silver = user['silver']
-    loaded_user_gold_rec = user['gold_received']
-    loaded_user_silver_rec = user['silver_received']
-    users[loaded_user_name] = User.Telegramuser(user_name=loaded_user_name, user_id=loaded_user_id,
-                                                user_mute=loaded_user_mute, user_gold=loaded_user_gold,
-                                                user_silver=loaded_user_silver, user_gold_rec=loaded_user_gold_rec,
-                                                user_silver_rec=loaded_user_silver_rec)
-    # If the user is being muted, append his name to the muted users list
-    if loaded_user_mute > 0:
-        muted_users.append(loaded_user_name)
+# If a save-file exists, create the users dict from it
+save_file_location = pathlib.Path('./safe.json')
+if save_file_location.is_file():
+    with open ('save.json', 'r') as fh_load_users:
+        loaded_users = json.load(fh_load_users)
+        logger.info('Imported from save-file:\n%s' % loaded_users)
+        # Load the values of every entry of the save file into the users dict
+    for u in loaded_users:
+        user = loaded_users[u]
+        loaded_user_name = user['name']
+        loaded_user_id = user['id']
+        loaded_user_mute = user['mute']
+        loaded_user_gold = user['gold']
+        loaded_user_silver = user['silver']
+        loaded_user_gold_rec = user['gold_received']
+        loaded_user_silver_rec = user['silver_received']
+        users[loaded_user_name] = User.Telegramuser(user_name=loaded_user_name, user_id=loaded_user_id,
+                                                    user_mute=loaded_user_mute, user_gold=loaded_user_gold,
+                                                    user_silver=loaded_user_silver,
+                                                    user_gold_rec=loaded_user_gold_rec,
+                                                    user_silver_rec=loaded_user_silver_rec)
+        # If the user is being muted, append his name to the muted users list
+        if loaded_user_mute > 0:
+            muted_users.append(loaded_user_name)
 
 # Start the bot and pass every message to the handle function
 bot = telepot.Bot(TOKEN)
 MessageLoop(bot, handle).run_as_thread()
-print ('Listening ...')
+logger.info('Listening ...')
 
 # Save the status of the users every 150 seconds in a .json-file
 while 1:
-    time.sleep(150)
+    time.sleep(180)
     with open ('save.json', 'w') as fh_save_users:
         # default=lambda o: o.__dict__ changes the Telegramuser-object to a dict
         fh_save_users.write(json.dumps(users, default=lambda o: o.__dict__))
-        print ("saved")
+        logger.info("saved")
