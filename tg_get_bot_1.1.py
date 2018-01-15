@@ -135,6 +135,10 @@ def handle(msg):
             silver_message = '%s\n%s' % (receiver_silver_status, giver_silver_status)
             bot.sendMessage(chat_identifier, silver_message)
 
+    if '/pingall' in message_text:
+        all_user_ids = ["@"+x for x in users.keys()]
+        bot.sendMessage(chat_identifier, "\n".join(all_user_ids))
+
 #Initialise the bot and some variables needed for operation
 TOKEN = ''  # this is the token you get from BotFather
 users = {}
