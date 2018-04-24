@@ -68,11 +68,11 @@ def handle(msg):
     get_status = users[sender_username].get_the_gets(message_identifier, report_from)
     if get_status:
         award_message = str()
-        if get_status >= 4:
+        if get_status >= 5:
             users[sender_username].gold += 1
             award_message = '%s was awarded gold for this get and has now %i gold to give away.' % (
             sender_username, users[sender_username].gold)
-        if get_status <= 3:
+        if get_status <= 4:
             users[sender_username].silver += 1
             award_message = '%s was awarded silver for this get and has now %i silver to give away.' % (sender_username, users[sender_username].silver)
         get_message = 'Message ID: %s\n"%s"\n%s' % (str(message_identifier), message_text, award_message)
